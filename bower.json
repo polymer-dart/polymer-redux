@@ -1,13 +1,21 @@
 {
   "name": "polymer-redux",
-  "version": "0.0.0",
   "authors": [
-    "Christopher Turner <turner296@gmail.com>"
+    {
+      "name": "Christopher Turner",
+      "email": "turner296@gmail.com",
+      "homepage": "https://github.com/tur-nr"
+    }
   ],
   "description": "Polymer bindings for Redux.",
-  "main": "polymer-redux.html",
+  "main": [
+    "polymer-redux.js",
+    "polymer-redux.html"
+  ],
   "moduleType": [
-    "globals"
+    "amd",
+    "globals",
+    "node"
   ],
   "keywords": [
     "redux",

@@ -14,7 +14,7 @@ with Polymer to be more focused on functionality than the applications state.
 ## Installation
 
 ```bash
-bower install --save tur-nr/polymer-redux
+bower install --save polymer-redux
 ```
 
 ## Usage
