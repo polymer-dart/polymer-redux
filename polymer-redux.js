@@ -46,51 +46,158 @@
             props.forEach(function(property) {
                 var propName = property.name;
                 var splices = [];
-                var value, previous;
+                var value, previous, notifications;
 
                 // statePath, a path or function.
                 var path = property.path;
-                if (typeof path == 'function') {
+                if (typeof path === 'function') {
                     value = path.call(element, state);
                 } else {
                     value = Polymer.Base.get(path, state);
                 }
 
-                // prevent unnecesary polymer notifications
                 previous = element.get(property.name);
-                if (value === previous) {
-                    return;
+                switch (property.type) {
+                    case Object:
+                        notifications = objectNotifications(propName, previous, value);
+                        break;
+
+                    case Array:
+                        try {
+                            notifications = arrayNotifications(propName, previous, value);
+                        } catch (e) {
+                            throw new TypeError(
+                                '<'+ element.is +'>.'+ propName +' type is Array but given: ' + (typeof value)
+                            );
+                        }
+                        break;
+
+                    default:
+                        notifications = valueNotifications(propName, previous, value);
+                        break;
                 }
 
-                // type of array, work out splices before setting the value
-                if (property.type === Array) {
-                    value = value || /* istanbul ignore next */ [];
-                    previous = previous || /* istanbul ignore next */ [];
+                // apply all element notifications
+                notifications.forEach(function(notif) {
+                    var type = notif.type;
 
-                    // check the value type
-                    if (!Array.isArray(value)) {
-                        throw new TypeError(
-                            '<'+ element.is +'>.'+ propName +' type is Array but given: ' + (typeof value)
-                        );
-                    }
+                    // readOnly props
+                    if (property.readOnly && type === 'set') type = 'notifyPath';
 
-                    splices = Polymer.ArraySplice.calculateSplices(value, previous);
-                }
-
-                // set
-                if (property.readOnly) {
-                    element.notifyPath(propName, value);
-                } else {
-                    element.set(propName, value);
-                }
-
-                // notify element of splices
-                if (splices.length) {
-                    element.notifySplices(propName, splices);
-                }
+                    element[type].apply(element, notif.args);
+                });
             });
             element.fire('state-changed', state);
         }
+    }
+
+    /**
+     * Creates Element notification call for a given path by comparing the property
+     * (previous) value and the state (value) value.
+     *
+     * @param {String} path Element property path.
+     * @param {*} previous The Element property value.
+     * @param {*} value The store's state value.
+     * @return {Array} Notification calls.
+     */
+    function valueNotifications(path, previous, value) {
+        var notifications = [];
+        if (previous !== value) {
+            notifications.push({
+                type: 'set',
+                args: [path, value]
+            });
+        }
+        return notifications;
+    }
+
+    /**
+     * Creates Element notification calls for array splices for a given path by
+     * comparing the property (previous) value and the state (value) value.
+     *
+     * @param {String} path Element property path.
+     * @param {Array} previous The Element property array.
+     * @param {Array} value The store's state array.
+     * @return {Array} Notification calls.
+     */
+    function arrayNotifications(path, previous, value) {
+        var notifications = [];
+        var useSet = !previous;
+        var splices, splice, added;
+
+        previous = previous || /* istanbul ignore next */ [];
+        value = value || /* istanbul ignore next */ [];
+
+        // check the value type
+        if (!Array.isArray(value)) {
+            throw new TypeError(); // caught by listener
+        }
+
+        // we have no previous array, use set
+        if (useSet) {
+            notifications.push({
+                type: 'set',
+                args: [path, value]
+            });
+        } else {
+            // calculate the splices
+            splices = Polymer.ArraySplice.calculateSplices(value, previous);
+            for (var i = 0, l = splices.length; i < l; ++i) {
+                splice = splices[i];
+                added = [];
+
+                // splice additions
+                if (splice.addedCount) {
+                    added = value.slice(splice.index, splice.index + splice.addedCount);
+                }
+
+                notifications.push({
+                    type: 'splice',
+                    args: [path, splice.index, splice.removed.length].concat(added)
+                });
+            }
+        }
+
+        return notifications;
+    }
+
+    /**
+     * Creates Element notification calls for deep objects. Recursively iterating
+     * over each property and checking the property (previous) value and the store's
+     * state (value) value.
+     *
+     * @param {String} path Element property path.
+     * @param {Array} previous The Element property array.
+     * @param {Array} value The store's state array.
+     * @return {Array} Notification calls.
+     */
+    function objectNotifications(path, previous, value) {
+        var notifications = [];
+        var keys, previousValue, currentValue, keyPath, subNotifications;
+
+        value = value || /* istanbul ignore next */ {};
+
+        if (previous == null) return valueNotifications(path, previous, value);
+
+        keys = Object.keys(value);
+        for (var i = 0, l = keys.length; i < l; ++i) {
+            key = keys[i];
+            previousValue = previous[key];
+            currentValue = value[key];
+            keyPath = [path, key].join('.');
+
+            if (previousValue && previousValue.constructor === Object) {
+                subNotifications = objectNotifications(keyPath, previousValue, currentValue);
+            } else if (Array.isArray(previousValue)) {
+                subNotifications = arrayNotifications(keyPath, previousValue, currentValue);
+            } else {
+                subNotifications = valueNotifications(keyPath, previousValue, currentValue);
+            }
+
+            notifications = notifications.concat(subNotifications);
+        }
+
+        return notifications;
     }
 
     /**

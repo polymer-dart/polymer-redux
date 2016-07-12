@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Polymer Redux Immutable Data</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1, user-scalable=yes">
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../../node_modules/redux/dist/redux.js"></script>
+
+    <link rel="import" href="../../iron-demo-helpers/demo-pages-shared-styles.html">
+    <link rel="import" href="../../iron-demo-helpers/demo-snippet.html">
+
+    <link rel="import" href="../polymer-redux.html">
+
+    <style is="custom-style" include="demo-pages-shared-styles">
+    </style>
+  </head>
+  <body>
+
+    <div class="vertical-section-container">
+      <h3>Polymer Redux Immutable Data</h3>
+      <demo-snippet>
+        <template>
+          <!-- redux setup -->
+          <script>
+            var reducer = function(state, action) {
+              if (!state) return {
+                foo: true,
+                deep: {
+                  prop: {
+                    foo: false
+                  },
+                  with: {
+                    array: 'abcjjc'.split('')
+                  }
+                }
+              };
+
+              switch (action.type) {
+                case 'SCALAR_CHANGE':
+                  state = {
+                    foo: !state.foo,
+                    deep: {
+                      prop: {
+                        foo: state.deep.prop.foo
+                      },
+                      with: {
+                        array: state.deep.with.array
+                      }
+                    }
+                  };
+                  break;
+
+                case 'DEEP_CHANGE':
+                  state = {
+                    foo: state.foo,
+                    deep: {
+                      prop: {
+                        foo: !state.deep.prop.foo
+                      },
+                      with: {
+                        array: state.deep.with.array
+                      }
+                    }
+                  };
+                  break;
+
+                case 'DEEP_ARRAY_CHANGE':
+                  state = {
+                    foo: state.foo,
+                    deep: {
+                      prop: {
+                        foo: state.deep.prop.foo
+                      },
+                      with: {
+                        array: 'axyzjjc'.split('')
+                      }
+                    }
+                  };
+                  break;
+              }
+
+              return state;
+            }
+            var store = Redux.createStore(reducer);
+            var ReduxBehavior = PolymerRedux(store);
+          </script>
+
+          <!-- friends list module -->
+          <dom-module id="im-data">
+          </dom-module>
+          <script>
+            Polymer({
+              is: 'im-data',
+              behaviors: [ ReduxBehavior ],
+              properties: {
+                foo: {
+                  type: Boolean,
+                  statePath: 'foo',
+                  observer: '_fooChanged'
+                },
+                deep: {
+                  type: Object,
+                  statePath: 'deep'
+                },
+                array: {
+                  type: Array,
+                  statePath: 'deep.with.array'
+                }
+              },
+
+              observers: [
+                '_deepChanged(deep.prop.*)',
+                '_deepArrayChanged(deep.with.array.length)'
+              ],
+
+              _fooChanged: function() {
+                debugger;
+              },
+
+              _deepChanged: function() {
+                debugger;
+              },
+
+              _deepArrayChanged: function() {
+                debugger;
+              }
+            });
+          </script>
+
+          <!-- demo -->
+          <im-data id="demo"></im-data>
+        </template>
+      </demo-snippet>
+    </div>
+  </body>
+</html>
