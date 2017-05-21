@@ -27,7 +27,8 @@
     "tests"
   ],
   "dependencies": {
-    "polymer": "2.0.0-rc.2"
+    "polymer": "^v2.0.0",
+    "webcomponentsjs":"^v1.0.0"
   },
   "devDependencies": {
     "iron-demo-helpers": "2.0-preview"
