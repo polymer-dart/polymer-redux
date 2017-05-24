@@ -137,12 +137,19 @@
       }
 
       _bindStore() {
-        if (this.store) {
-          unbind(this);
+        if (this._boundedStore != this.store) {
+          if (this._boundedStore) {
+            unbind(this);
+            this._boundedStore = null;
+          }
 
-          var properties = collect(this.constructor, 'properties') || {};
+          if (this.store) {
+            var properties = collect(this.constructor, 'properties') || {};
 
-          bind(this.store, this, properties);
+            bind(this.store, this, properties);
+
+            this._boundedStore = this.store;
+          }
         }
       }
 
