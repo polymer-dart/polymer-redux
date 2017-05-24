@@ -148,7 +148,7 @@
 
       connectedCallback() {
         super.connectedCallback();
-        _bindStore();
+        this._bindStore();
       }
 
       disconnectedCallback() {
